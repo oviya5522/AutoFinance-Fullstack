@@ -1,7 +1,4 @@
-import {
-  getCustomers,
-  getCustomerById,
-} from "./customerStorage";
+import { getCustomers, getCustomerById } from "./customerStorage";
 import { apiGet, apiPost, apiPut, notifyDataUpdated } from "./api";
 import {
   getRepaymentBuckets,
@@ -9,10 +6,7 @@ import {
   getSchedulePaidAmount,
   getOutstandingPenaltySummary,
 } from "./repaymentStorage";
-import {
-  getVehicleById,
-} from "./vehicleStorage";
-
+import { getVehicleById } from "./vehicleStorage";
 
 export const DEFAULT_RELOAN_RULES = {
   minimumPaidInstallmentPercentage: 75,
@@ -47,16 +41,10 @@ const startOfDay = (value) => {
   return date;
 };
 
-const getLoanStatus = (loan) =>
-  normalize(loan?.status || "active");
+const getLoanStatus = (loan) => normalize(loan?.status || "active");
 
-const getPreviousLoanStatusEvaluation = (
-  loan,
-  rules
-) => {
-  const status = getLoanStatus(
-    loan
-  );
+const getPreviousLoanStatusEvaluation = (loan, rules) => {
+  const status = getLoanStatus(loan);
 
   const normalizedStatus = status
     .replace(/[_-]+/g, " ")
@@ -74,12 +62,7 @@ const getPreviousLoanStatusEvaluation = (
     "repayment",
   ];
 
-  const completedStatuses = [
-    "closed",
-    "paid",
-    "settled",
-    "completed",
-  ];
+  const completedStatuses = ["closed", "paid", "settled", "completed"];
 
   const blockedStatuses = [
     "foreclosed",
@@ -89,25 +72,16 @@ const getPreviousLoanStatusEvaluation = (
     "canceled",
   ];
 
-  if (
-    blockedStatuses.includes(
-      normalizedStatus
-    )
-  ) {
+  if (blockedStatuses.includes(normalizedStatus)) {
     return {
       allowed:
-        normalizedStatus ===
-          "foreclosed"
-          ? rules.allowForeclosedLoan
-          : false,
+        normalizedStatus === "foreclosed" ? rules.allowForeclosedLoan : false,
       currentValue:
-        normalizedStatus ===
-          "foreclosed"
+        normalizedStatus === "foreclosed"
           ? "Foreclosed"
           : loan?.status || "Unknown",
       message:
-        normalizedStatus ===
-          "foreclosed"
+        normalizedStatus === "foreclosed"
           ? rules.allowForeclosedLoan
             ? "Foreclosed loans are allowed by the current rules"
             : "Foreclosed loans are not allowed"
@@ -115,20 +89,12 @@ const getPreviousLoanStatusEvaluation = (
     };
   }
 
-  if (
-    openStatuses.includes(
-      normalizedStatus
-    )
-  ) {
+  if (openStatuses.includes(normalizedStatus)) {
     const isPartial =
-      normalizedStatus ===
-        "partially paid" ||
-      normalizedStatus ===
-        "partial";
+      normalizedStatus === "partially paid" || normalizedStatus === "partial";
 
     return {
-      allowed:
-        rules.allowActiveLoan,
+      allowed: rules.allowActiveLoan,
       currentValue: isPartial
         ? "Partially Paid / Active"
         : loan?.status || "Active",
@@ -138,88 +104,61 @@ const getPreviousLoanStatusEvaluation = (
     };
   }
 
-  if (
-    completedStatuses.includes(
-      normalizedStatus
-    )
-  ) {
+  if (completedStatuses.includes(normalizedStatus)) {
     return {
-      allowed:
-        rules.allowClosedLoan,
-      currentValue:
-        loan?.status || "Closed",
-      message:
-        rules.allowClosedLoan
-          ? "Completed loans are allowed by the current rules"
-          : "Completed loans are not allowed by the current rules",
+      allowed: rules.allowClosedLoan,
+      currentValue: loan?.status || "Closed",
+      message: rules.allowClosedLoan
+        ? "Completed loans are allowed by the current rules"
+        : "Completed loans are not allowed by the current rules",
     };
   }
 
   return {
     allowed: false,
-    currentValue:
-      loan?.status || "Unknown",
+    currentValue: loan?.status || "Unknown",
     message:
       "The previous loan status is not recognized as an eligible repayment state",
   };
 };
 
-const getLoanVehicle = (loan, vehicle) =>
-  vehicle || loan?.vehicle || {};
+const getLoanVehicle = (loan, vehicle) => vehicle || loan?.vehicle || {};
 
-const getVehicleStatus = (vehicle) =>
-  normalize(vehicle?.status || "active");
+const getVehicleStatus = (vehicle) => normalize(vehicle?.status || "active");
 
 const getPaidInstallmentCount = (loan) =>
   Array.isArray(loan?.repaymentSchedule)
     ? loan.repaymentSchedule.filter(
         (row) =>
-          getScheduleRemainingAmount(
-            row
-          ) <= 0 ||
-          normalize(
-            row?.status
-          ) === "paid"
+          getScheduleRemainingAmount(row) <= 0 ||
+          normalize(row?.status) === "paid",
       ).length
     : 0;
 
 export const getRepaymentHistoryEligibility = (
   loan,
-  rules = getReLoanRules()
+  rules = getReLoanRules(),
 ) => {
-  const schedule = Array.isArray(
-    loan?.repaymentSchedule
-  )
+  const schedule = Array.isArray(loan?.repaymentSchedule)
     ? loan.repaymentSchedule
     : [];
 
-  const totalScheduledInstallments =
-    schedule.length;
+  const totalScheduledInstallments = schedule.length;
 
-  const fullyPaidInstallments =
-    getPaidInstallmentCount(
-      loan
-    );
+  const fullyPaidInstallments = getPaidInstallmentCount(loan);
 
-  const completionPercentage =
-    toNumber(
-      rules.minimumPaidInstallmentPercentage
-    );
+  const completionPercentage = toNumber(rules.minimumPaidInstallmentPercentage);
 
-  const requiredPaidInstallments =
-    Math.ceil(
-      totalScheduledInstallments *
-        (completionPercentage / 100)
-    );
+  const requiredPaidInstallments = Math.ceil(
+    totalScheduledInstallments * (completionPercentage / 100),
+  );
 
   return {
     totalScheduledInstallments,
     fullyPaidInstallments,
     requiredPaidInstallments,
     completionPercentage,
-    passes:
-      fullyPaidInstallments >=
-      requiredPaidInstallments,
+    passes: fullyPaidInstallments >= requiredPaidInstallments,
   };
 };
 
@@ -229,15 +168,15 @@ const getOverdueMetrics = (loan, referenceDate = new Date()) => {
   const overdueAmount = roundMoney(
     buckets.overdue.reduce(
       (total, row) => total + getScheduleRemainingAmount(row),
-      0
-    )
+      0,
+    ),
   );
   const overdueDays = buckets.overdue.reduce((maximum, row) => {
     const due = startOfDay(row?.dueDate);
     if (!due || !today) return maximum;
     const days = Math.max(
       0,
-      Math.floor((today.getTime() - due.getTime()) / 86400000)
+      Math.floor((today.getTime() - due.getTime()) / 86400000),
     );
     return Math.max(maximum, days);
   }, 0);
@@ -284,30 +223,32 @@ export const getCustomerLoans = (customerRecord) => {
 
 export const getCustomerReLoans = async (customerId) => {
   const customer = await getCustomerById(customerId);
-  return getCustomerLoans(customer).filter(
-    (loan) =>
-      Boolean(
-        loan?.previousLoanId ||
-          loan?.previousLoanNumber ||
-          loan?.previousLoanReference
-      )
+  return getCustomerLoans(customer).filter((loan) =>
+    Boolean(
+      loan?.previousLoanId ||
+      loan?.previousLoanNumber ||
+      loan?.previousLoanReference,
+    ),
   );
 };
 
-export const hasActiveReLoan = (customerId) =>
-  getCustomerReLoans(customerId).some((loan) => {
+export const hasActiveReLoan = async (customerId) => {
+  const reLoans = await getCustomerReLoans(customerId);
+
+  return reLoans.some((loan) => {
     const status = getLoanStatus(loan);
     return ["active", "pending", "due", "overdue", "partially_paid"].includes(
-      status
+      status,
     );
   });
+};
 
 const checkCustomerVerification = (customer, rules) => {
   const personal = customer?.customer?.personal || {};
   const complete = Boolean(
     personal?.name &&
-      (personal?.mobileNumber || personal?.alternateMobileNumber) &&
-      (personal?.address || personal?.area)
+    (personal?.mobileNumber || personal?.alternateMobileNumber) &&
+    (personal?.address || personal?.area),
   );
   return {
     id: "customerVerification",
@@ -318,7 +259,9 @@ const checkCustomerVerification = (customer, rules) => {
         : "pending"
       : "pass",
     currentValue: complete ? "Complete" : "Incomplete",
-    requiredValue: rules.requireCustomerVerification ? "Complete" : "Not required",
+    requiredValue: rules.requireCustomerVerification
+      ? "Complete"
+      : "Not required",
     message: complete
       ? "Customer information is complete"
       : "Required customer information is incomplete",
@@ -331,23 +274,22 @@ const checkDocuments = (customer, rules) => {
   const selectedTypes = Array.isArray(documents.selectedTypes)
     ? documents.selectedTypes
     : [];
-  const complete = Boolean(
-    kyc.aadhaarNumber ||
+  const complete =
+    Boolean(
+      kyc.aadhaarNumber ||
       kyc.drivingLicenceNumber ||
       kyc.panNumber ||
-      kyc.voterIdNumber
-  ) && selectedTypes.length >= Number(documents.requiredMinimum || 0);
+      kyc.voterIdNumber,
+    ) && selectedTypes.length >= Number(documents.requiredMinimum || 0);
   return {
     id: "requiredDocuments",
     label: "Required Documents",
-    status: rules.requireDocuments
-      ? complete
-        ? "pass"
-        : "pending"
-      : "pass",
+    status: rules.requireDocuments ? (complete ? "pass" : "pending") : "pass",
     currentValue: complete ? "Complete" : "Pending Verification",
     requiredValue: rules.requireDocuments ? "Complete" : "Not required",
-    message: complete ? "Required documents are complete" : "Required documents need verification",
+    message: complete
+      ? "Required documents are complete"
+      : "Required documents need verification",
   };
 };
 
@@ -358,13 +300,10 @@ export const calculateReLoanFinancialSummary = (loan) => {
   const buckets = getRepaymentBuckets(loan);
   const penalty = getOutstandingPenaltySummary(loan);
   const outstanding = roundMoney(
-    schedule.reduce(
-      (total, row) => total + getScheduleRemainingAmount(row),
-      0
-    )
+    schedule.reduce((total, row) => total + getScheduleRemainingAmount(row), 0),
   );
   const paidAmount = roundMoney(
-    schedule.reduce((total, row) => total + getSchedulePaidAmount(row), 0)
+    schedule.reduce((total, row) => total + getSchedulePaidAmount(row), 0),
   );
   return {
     originalLoanAmount: roundMoney(loan?.loanAmount),
@@ -372,32 +311,32 @@ export const calculateReLoanFinancialSummary = (loan) => {
     principalOutstanding: roundMoney(
       schedule.reduce(
         (total, row) => total + toNumber(row?.remainingPrincipal),
-        0
-      )
+        0,
+      ),
     ),
     interestOutstanding: roundMoney(
       schedule.reduce(
         (total, row) => total + toNumber(row?.remainingInterest),
-        0
-      )
+        0,
+      ),
     ),
     currentOverdue: roundMoney(
       buckets.overdue.reduce(
         (total, row) => total + getScheduleRemainingAmount(row),
-        0
-      )
+        0,
+      ),
     ),
     penalty: roundMoney(penalty?.amount),
     totalOutstanding: outstanding,
     installmentsPaid: getPaidInstallmentCount(loan),
     totalInstallments: schedule.length,
     remainingInstallments: schedule.filter(
-      (row) => getScheduleRemainingAmount(row) > 0
+      (row) => getScheduleRemainingAmount(row) > 0,
     ).length,
   };
 };
 
-export const checkReLoanEligibility = ({
+export const checkReLoanEligibility = async ({
   customer,
   loan,
   vehicle,
@@ -408,46 +347,33 @@ export const checkReLoanEligibility = ({
   const vehicleRecord = getLoanVehicle(loan, vehicle);
   const vehicleStatus = getVehicleStatus(vehicleRecord);
   const customerId = customer?.customer?.id || loan?.customerId || "";
-  const previousLoanStatus =
-    getPreviousLoanStatusEvaluation(
-      loan,
-      activeRules
-    );
-  const repaymentHistory =
-    getRepaymentHistoryEligibility(
-      loan,
-      activeRules
-    );
+  const previousLoanStatus = getPreviousLoanStatusEvaluation(loan, activeRules);
+  const repaymentHistory = getRepaymentHistoryEligibility(loan, activeRules);
   const vehicleAllowed =
     vehicleStatus === "active" ||
-    (vehicleStatus === "released") ||
+    vehicleStatus === "released" ||
     (vehicleStatus === "seized" && activeRules.allowSeizedVehicle) ||
     (vehicleStatus === "sold" && activeRules.allowSoldVehicle);
   const checks = [
     {
       id: "repaymentHistory",
       label: "Repayment History",
-      status: repaymentHistory.passes
-        ? "pass"
-        : "fail",
-      currentValue:
-        repaymentHistory.fullyPaidInstallments,
-      requiredValue:
-        repaymentHistory.requiredPaidInstallments,
-      totalScheduledInstallments:
-        repaymentHistory.totalScheduledInstallments,
-      fullyPaidInstallments:
-        repaymentHistory.fullyPaidInstallments,
-      requiredPaidInstallments:
-        repaymentHistory.requiredPaidInstallments,
-      completionPercentage:
-        repaymentHistory.completionPercentage,
+      status: repaymentHistory.passes ? "pass" : "fail",
+      currentValue: repaymentHistory.fullyPaidInstallments,
+      requiredValue: repaymentHistory.requiredPaidInstallments,
+      totalScheduledInstallments: repaymentHistory.totalScheduledInstallments,
+      fullyPaidInstallments: repaymentHistory.fullyPaidInstallments,
+      requiredPaidInstallments: repaymentHistory.requiredPaidInstallments,
+      completionPercentage: repaymentHistory.completionPercentage,
       message: `${repaymentHistory.fullyPaidInstallments} / ${repaymentHistory.totalScheduledInstallments} installments fully paid. Required: ${repaymentHistory.requiredPaidInstallments} installments. Required completion: ${repaymentHistory.completionPercentage}%`,
     },
     {
       id: "overdueAmount",
       label: "Overdue Amount",
-      status: metrics.overdueAmount <= activeRules.maximumOverdueAmount ? "pass" : "fail",
+      status:
+        metrics.overdueAmount <= activeRules.maximumOverdueAmount
+          ? "pass"
+          : "fail",
       currentValue: metrics.overdueAmount,
       requiredValue: activeRules.maximumOverdueAmount,
       message: `₹${metrics.overdueAmount} / ₹${activeRules.maximumOverdueAmount} allowed`,
@@ -455,7 +381,8 @@ export const checkReLoanEligibility = ({
     {
       id: "overdueDays",
       label: "Overdue Days",
-      status: metrics.overdueDays <= activeRules.maximumOverdueDays ? "pass" : "fail",
+      status:
+        metrics.overdueDays <= activeRules.maximumOverdueDays ? "pass" : "fail",
       currentValue: metrics.overdueDays,
       requiredValue: activeRules.maximumOverdueDays,
       message: `${metrics.overdueDays} / ${activeRules.maximumOverdueDays} days`,
@@ -463,14 +390,10 @@ export const checkReLoanEligibility = ({
     {
       id: "previousLoanStatus",
       label: "Previous Loan Status",
-      status: previousLoanStatus.allowed
-        ? "pass"
-        : "fail",
-      currentValue:
-        previousLoanStatus.currentValue,
+      status: previousLoanStatus.allowed ? "pass" : "fail",
+      currentValue: previousLoanStatus.currentValue,
       requiredValue: "Allowed status",
-      message:
-        previousLoanStatus.message,
+      message: previousLoanStatus.message,
     },
     {
       id: "vehicleStatus",
@@ -478,15 +401,21 @@ export const checkReLoanEligibility = ({
       status: vehicleAllowed ? "pass" : "fail",
       currentValue: vehicleRecord?.status || "Unknown",
       requiredValue: "Allowed vehicle",
-      message: vehicleAllowed ? "Vehicle is eligible" : "Vehicle status is not eligible",
+      message: vehicleAllowed
+        ? "Vehicle is eligible"
+        : "Vehicle status is not eligible",
     },
     {
       id: "existingReLoan",
       label: "Existing Active Re-loan",
-      status: hasActiveReLoan(customerId) ? "fail" : "pass",
-      currentValue: hasActiveReLoan(customerId) ? "Active re-loan exists" : "None",
+      status: (await hasActiveReLoan(customerId)) ? "fail" : "pass",
+      currentValue: (await hasActiveReLoan(customerId))
+        ? "Active re-loan exists"
+        : "None",
       requiredValue: "None",
-      message: hasActiveReLoan(customerId) ? "Customer already has an active re-loan" : "No active re-loan",
+      message: (await hasActiveReLoan(customerId))
+        ? "Customer already has an active re-loan"
+        : "No active re-loan",
     },
     checkCustomerVerification(customer, activeRules),
     checkDocuments(customer, activeRules),
@@ -496,7 +425,11 @@ export const checkReLoanEligibility = ({
   const eligible = failedChecks.length === 0 && pendingChecks.length === 0;
   return {
     eligible,
-    status: failedChecks.length ? "NOT_ELIGIBLE" : pendingChecks.length ? "PENDING_VERIFICATION" : "ELIGIBLE",
+    status: failedChecks.length
+      ? "NOT_ELIGIBLE"
+      : pendingChecks.length
+        ? "PENDING_VERIFICATION"
+        : "ELIGIBLE",
     checks,
     failedChecks,
     pendingChecks,
@@ -521,7 +454,7 @@ export const saveReLoanEligibility = async (result) => {
 export const getReLoanEligibility = async (loanId) => {
   try {
     const checks = await apiGet(
-      `/reloan/eligibility?loanId=${encodeURIComponent(loanId || "")}`
+      `/reloan/eligibility?loanId=${encodeURIComponent(loanId || "")}`,
     );
 
     return Array.isArray(checks) ? checks[0] || null : null;
@@ -547,13 +480,17 @@ export const findCustomerAndLoan = async (loanId) => {
   for (const customer of customers) {
     const loans = getCustomerLoans(customer);
     const loan = loans.find(
-      (item) => String(item?.id || item?.loanNumber) === String(loanId)
+      (item) => String(item?.id || item?.loanNumber) === String(loanId),
     );
     if (loan) {
       return {
         customer,
         loan,
-        vehicle: getVehicleById(loan?.vehicleId) || customer?.vehicle || loan?.vehicle || {},
+        vehicle:
+          getVehicleById(loan?.vehicleId) ||
+          customer?.vehicle ||
+          loan?.vehicle ||
+          {},
       };
     }
   }

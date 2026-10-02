@@ -11,21 +11,21 @@ const ReLoanEligibilityModal = ({ loan, customer, vehicle, onClose, onViewResult
   const [result, setResult] = useState(null);
   const [visibleCount, setVisibleCount] = useState(0);
 
-  useEffect(() => {
-    let cancelled = false;
+useEffect(() => {
+  let cancelled = false;
 
-    getReLoanRules().then((rules) => {
-      if (!cancelled) {
-        setResult(
-          checkReLoanEligibility({ customer, loan, vehicle, rules })
-        );
-      }
-    });
+  getReLoanRules().then(async (rules) => {
+    if (!cancelled) {
+      setResult(
+        await checkReLoanEligibility({ customer, loan, vehicle, rules })
+      );
+    }
+  });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [customer, loan, vehicle]);
+  return () => {
+    cancelled = true;
+  };
+}, [customer, loan, vehicle]);
 
   useEffect(() => {
     if (!result) {
